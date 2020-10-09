@@ -4,7 +4,7 @@ import cv2
 import matplotlib.pyplot as plt
 CLASSES = ['person', 'bird', 'cat', 'cow', 'dog', 'horse', 'sheep',
            'aeroplane', 'bicycle', 'boat', 'bus', 'car', 'motorbike', 'train',
-           'bottle', 'chair', 'dining table', 'potted plant', 'sofa', 'tvmonitor']
+           'bottle', 'chair', 'dining table', 'potted plant', 'sofa', 'tvmonitor']  #一共有18种物体
 
 def convert(size, box):
     """将bbox的左上角点、右下角点坐标的格式，转换为bbox中心点+bbox的w,h的格式
@@ -67,6 +67,8 @@ def show_labels_img(imgname):
             print(CLASSES[int(label[0])])
             pt1 = (int(label[1] * w - label[3] * w / 2), int(label[2] * h - label[4] * h / 2))# 左上角的坐标
             pt2 = (int(label[1] * w + label[3] * w / 2), int(label[2] * h + label[4] * h / 2))
+            print(pt1)
+            print(pt2)
             cv2.putText(img,CLASSES[int(label[0])],pt1,cv2.FONT_HERSHEY_SIMPLEX,0.5,(0,0,255))
             """
             puttext(src,str,Point2d(pt.at<double>(i,0),pt.at<double>(i,1)),CV_FONT_HERSHEY_SIMPLEX,3,Scalar(0,0,255),6,8);        //pt是mat类型，n行2列的矩阵
@@ -100,4 +102,4 @@ def test2():
     bbox = [x.split() for x in bbox]  # 空格符
     bbox = [float(x) for y in bbox for x in y]  # 二维数组
     print(bbox)
-test2()
+show_labels_img("2007_000129")

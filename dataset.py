@@ -2,6 +2,7 @@ import numpy as np
 from matplotlib import transforms
 from torch.utils.data import Dataset
 import cv2
+import  xml_text
 
 class VOC2012(Dataset):
     def __init__(self,is_train=True,is_aug=True):
@@ -38,6 +39,7 @@ class VOC2012(Dataset):
             img = np.pad(img,((padh,padh),(0,0),(0,0)), 'constant', constant_values=0)
         img = cv2.resize(img,(input_size,input_size))
         # 图像增广部分，这里不做过多处理，因为改变bbox信息还蛮麻烦的
+
         if self.is_aug:
             aug = transforms.Compose([
                 transforms.ToTensor()
@@ -52,7 +54,7 @@ class VOC2012(Dataset):
         if len(bbox)%5!=0:
             raise ValueError("File:"+self.labelpath+self.filenames[item]+".txt"+"——bbox Extraction Error!")
 
-        # 根据padding、图像增广等操作，将原始的bbox数据转换为修改后图像的bbox数据
+        # 根据padding、图像增广等操作，将原始的bbox数据转换为修改后图像的bbox数据    原始的坐标根据增广的方向对坐标进行改变
         for i in range(len(bbox)//5):
             if padw != 0:
                 bbox[i * 5 + 1] = (bbox[i * 5 + 1] * w + padw) / h
@@ -66,3 +68,25 @@ class VOC2012(Dataset):
         # 此处可以写代码验证一下，经过convert_bbox2labels函数后得到的labels变量中储存的数据是否正确
         labels = transforms.ToTensor()(labels)
         return img,labels
+
+
+def convert_bbox2labels(bbox):
+    """将bbox的(cls,x,y,w,h)数据转换为训练时方便计算Loss的数据形式(7,7,5*B+cls_num)
+    注意，输入的bbox的信息是(xc,yc,w,h)格式的，转换为labels后，bbox的信息转换为了(px,py,w,h)格式"""
+    gridsize = 1.0/7  #yolo会将格子分为7*7的样式 为一个格子的宽度 格子为正方形的
+    labels = np.zeros((7,7,5*2+len(xml_text.CLASSES)))  # 注意，此处需要根据不同数据集的类别个数进行修改
+    for i in range(len(bbox)//5):  #每个循环都是一个标注选框
+        gridx = int(bbox[i*5+1] // gridsize)  # 当前bbox中心落在第gridx个网格,列
+        gridy = int(bbox[i*5+2] // gridsize)  # 当前bbox中心落在第gridy个网格,行
+        # (bbox中心坐标 - 网格左上角点的坐标)/网格大小  ==> bbox中心点的相对位置
+        gridpx = bbox[i * 5 + 1] / gridsize - gridx  #一个格子的大小为1/7   大小为这个
+        gridpy = bbox[i * 5 + 2] / gridsize - gridy
+        # 将第gridy行，gridx列的网格设置为负责当前ground truth的预测，置信度和对应类别概率均置为1
+        labels[gridy, gridx, 0:5] = np.array([gridpx, gridpy, bbox[i * 5 + 3], bbox[i * 5 + 4], 1])
+        labels[gridy, gridx, 5:10] = np.array([gridpx, gridpy, bbox[i * 5 + 3], bbox[i * 5 + 4], 1])
+        labels[gridy, gridx, 10+int(bbox[i*5])] = 1
+    return labels
+def  test2():
+    train_data = VOC2012()
+    print(train_data)
+test2()
